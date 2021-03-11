@@ -11,36 +11,38 @@ namespace HW4
     class Program
     {
         static Queue<string> queue = new Queue<string>();
-        static CancellationTokenSource cancel = new CancellationTokenSource();
-
+        private static bool isRunning = true;
+        
+        
         static void Main(string[] args)
         {
             Console.WriteLine("1 - First Request");
             Console.WriteLine("2 - Second Request");
             Console.WriteLine();
-            try
+            while (isRunning)
             {
-                Task.Run(() => RunQueue(), cancel.Token);
-                Task.Run(() => ListenForInput(), cancel.Token);
-                cancel.Token.WaitHandle.WaitOne();
-                cancel.Token.ThrowIfCancellationRequested();
-            }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine("Operation Canceled.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
+                RunQueueAsync();
+                RunListenAsync();
             }
         }
 
-        static void ListenForInput()
+        static async Task RunQueueAsync()
         {
-            while (true)
+            await Task.Run(() => RunQueue());
+        }
+
+        static async void RunListenAsync()
+        {
+            await Task.Run(() => ListenForInput());
+        }
+
+
+        static async Task ListenForInput()
+        {
+            while (isRunning)
             {
                 string userInput = Console.ReadLine();
-
+                
                 switch (userInput)
                 {
                     case "1":
@@ -51,6 +53,11 @@ namespace HW4
                         Console.WriteLine("Case 2");
                         queue.Enqueue(userInput);
                         break;
+                    case "exit":
+                        Console.WriteLine("Exit");
+                        isRunning = false;
+                        await RunQueueAsync();
+                        break;
                     default:
                         Console.WriteLine("Default case");
                         break;
@@ -58,11 +65,11 @@ namespace HW4
             }
         }
 
-        static void RunQueue()
+        static async Task RunQueue()
         { 
             string connectionString = "Server=localhost,1433;Database=Lab3;User=sa;Password=P@55w0rd;";
             
-            while (true)
+            while (isRunning)
             {
                 Thread.Sleep(2000);
                 string res = "";
